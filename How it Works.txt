@@ -1,0 +1,27 @@
+How it Works
+
+CSS variables control spawn rate, sizes, timing, and rounded corners for boxes and the hero frame.
+
+JS measures the hero area, spawns white “boxes” inside the top-right quadrant, and animates them through the monitor corner and out of frame using the Web Animations API.
+
+Accessibility: Particles are decorative (aria-hidden="true"); reduced-motion users have animations disabled via prefers-reduced-motion.
+
+Customizing
+
+Edit CSS variables near the top of index.html to change:
+
+--emit-rate-ms, --size-min, --size-max
+
+--flight-min, --flight-max
+
+--hero-radius, --hero-crop-zoom, --hero-crop-shift
+
+Replace image1.png with your preferred hero image (same file name or update the <img src>).
+
+Deployment
+
+Because it’s static, you can host on any static host (e.g., GitHub Pages). Just publish the root directory.
+
+License
+
+MIT — see LICENSE
