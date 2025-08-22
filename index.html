@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Computer Technologies — Hero with Flying Boxes (Image)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root{
+    --hero-max: 1080px;
+    --hero-radius: 30px; /* More rounding for all corners */
+    --hero-fade: 1200ms;
+    --shadow: 0 40px 140px rgba(0,0,0,.55);
+    --hero-crop-shift: -8%;
+    --hero-crop-zoom: 1.10;
+
+    /* Boxes settings */
+    --emit-rate-ms: 80; /* Faster spawn = more boxes */
+    --size-min: 8px;
+    --size-max: 36px;
+    --box-round: 6px;
+    --flight-min: 2400ms;
+    --flight-max: 4600ms;
+    --z-box: 140px;
+  }
+
+  html, body {
+    margin: 0; height: 100%;
+    background:#0a0a0a; /* Changed to match logo background */
+    color:#fff;
+    font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    overflow: hidden;
+  }
+
+  .stage {
+    position: relative;
+    min-height: 100dvh;
+    display: grid;
+    place-items: center;
+    perspective: 1200px;
+    overflow: hidden;
+  }
+
+  /* HERO FRAME */
+  .hero {
+    position: relative;
+    width: min(92vw, var(--hero-max));
+    aspect-ratio: 16/9;
+    border-radius: var(--hero-radius);
+    overflow: hidden;
+    background: transparent;
+    box-shadow: var(--shadow);
+    z-index: 2;
+    transform: translateZ(0);
+  }
+  .hero::before,
+  .hero::after{ content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; }
+  .hero::before{
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), inset 0 0 80px rgba(0,0,0,.35);
+  }
+  .hero::after{
+    background: linear-gradient(to bottom, rgba(255,255,255,.12), rgba(255,255,255,0) 22%);
+    opacity:.3; mix-blend-mode:screen;
+  }
+
+  /* IMAGE (rounded corners too) */
+  .hero img{
+    position:absolute; inset:0; width:100%; height:100%;
+    object-fit: cover; border-radius: var(--hero-radius); /* Rounds all corners */
+    display:block;
+    opacity:0; animation: heroFade var(--hero-fade) ease forwards;
+    transform: translateY(var(--hero-crop-shift)) scale(var(--hero-crop-zoom));
+    transform-origin: 50% 50%;
+    will-change: transform, opacity;
+  }
+  @keyframes heroFade{
+    from{ opacity:0; filter:blur(2px) brightness(.95);
+          transform: translateY(var(--hero-crop-shift)) scale(calc(var(--hero-crop-zoom) * 1.01)); }
+    to  { opacity:1; filter:none;
+          transform: translateY(var(--hero-crop-shift)) scale(var(--hero-crop-zoom)); }
+  }
+
+  /* BOXES */
+  .particles {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    transform-style: preserve-3d;
+  }
+  .box {
+    position: absolute;
+    background: #fff;
+    border-radius: var(--box-round);
+    will-change: transform, opacity, filter;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,.25));
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .box, .hero img{ animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stage" id="stage">
+  <!-- HERO (uses image) -->
+  <div class="hero" id="hero">
+    <img src="image1.png" alt="Computer Technologies logo hero">
+  </div>
+
+  <!-- BOXES overlay -->
+  <div class="particles" id="particles" aria-hidden="true"></div>
+</div>
+
+<script>
+/* ===== BOXES: spawn FROM top-right quadrant, THROUGH corner, OUT ===== */
+const hero = document.getElementById('hero');
+const particles = document.getElementById('particles');
+const css = getComputedStyle(document.documentElement);
+
+const EMIT_RATE_MS = parseInt(css.getPropertyValue('--emit-rate-ms')) || 140;
+const SIZE_MIN     = parseInt(css.getPropertyValue('--size-min'))     || 10;
+const SIZE_MAX     = parseInt(css.getPropertyValue('--size-max'))     || 36;
+const FLIGHT_MIN   = parseInt(css.getPropertyValue('--flight-min'))   || 2600;
+const FLIGHT_MAX   = parseInt(css.getPropertyValue('--flight-max'))   || 4600;
+const Z_BOX        = parseInt(css.getPropertyValue('--z-box'))        || 140;
+
+let heroRect = null;
+function updateHeroRect(){ heroRect = hero.getBoundingClientRect(); }
+
+const rand  = (min,max)=> Math.random()*(max-min)+min;
+const randI = (min,max)=> Math.floor(rand(min,max));
+
+function spawnBox() {
+  if (!heroRect) updateHeroRect();
+
+  const el = document.createElement('div');
+  el.className = 'box';
+  const size = randI(SIZE_MIN, SIZE_MAX);
+  el.style.width = size + 'px';
+  el.style.height = size + 'px';
+
+  /* Start inside top-right quadrant */
+  const startX = heroRect.left + heroRect.width  * rand(0.58, 0.98);
+  const startY = heroRect.top  + heroRect.height * rand(0.06, 0.44);
+  el.style.left = (startX - size/2) + 'px';
+  el.style.top  = (startY - size/2) + 'px';
+
+  /* Path to top-right corner and beyond */
+  const cornerX = heroRect.right - 6;
+  const cornerY = heroRect.top + 6;
+  const outX = cornerX + rand(80, 340);
+  const outY = cornerY - rand(120, 420);
+
+  const dx1 = cornerX - startX;
+  const dy1 = cornerY - startY;
+  const dx2 = outX - startX;
+  const dy2 = outY - startY;
+
+  const z1 = Z_BOX * rand(0.4, 0.8);
+  const z2 = Z_BOX * rand(0.9, 1.3);
+  const scaleEnd = rand(1.06, 1.22);
+  const spin = rand(-90, 160);
+  const dur = rand(FLIGHT_MIN, FLIGHT_MAX);
+
+  const kf = [
+    { transform: `translate3d(0px, 0px, 0px) scale(1) rotate(0deg)`, opacity: 0.0 },
+    { transform: `translate3d(${dx1}px, ${dy1}px, ${z1}px) scale(1.08) rotate(${spin*0.5}deg)`, opacity: 0.9, offset: 0.45 },
+    { transform: `translate3d(${dx2}px, ${dy2}px, ${z2}px) scale(${scaleEnd}) rotate(${spin}deg)`, opacity: 0.0 }
+  ];
+
+  const anim = el.animate(kf, {
+    duration: dur,
+    easing: 'cubic-bezier(.2,.8,.2,1)',
+    fill: 'forwards'
+  });
+  anim.onfinish = () => el.remove();
+  particles.appendChild(el);
+}
+
+let emitTimer = null;
+function loopEmit(){
+  spawnBox();
+  const jitter = Math.random()*50 - 25; // Slight variation for natural effect
+  emitTimer = setTimeout(loopEmit, Math.max(30, EMIT_RATE_MS + jitter)); // Lowered min to add more boxes
+}
+
+function startEverything(){
+  updateHeroRect();
+  if (!emitTimer) loopEmit();
+}
+
+window.addEventListener('load', startEverything);
+window.addEventListener('resize', updateHeroRect);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    if (emitTimer) { clearTimeout(emitTimer); emitTimer = null; }
+  } else {
+    if (!emitTimer) loopEmit();
+  }
+});
+</script>
+
+</body>
+</html>
