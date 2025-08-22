@@ -2,7 +2,7 @@
 
 A tiny, static landing “hero” that displays the Computer Technologies logo with softly animated white squares exiting the monitor frame. Built with plain HTML/CSS/JS—no build tools or dependencies.
 
-> Main entry: `index.html`. The hero image used is `image1.png`. :contentReference[oaicite:0]{index=0}
+> Main entry: `index.html`. The hero image used is `image1.png`. 
 
 ---
 
